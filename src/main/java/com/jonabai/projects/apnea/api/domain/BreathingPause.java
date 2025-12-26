@@ -1,23 +1,52 @@
 package com.jonabai.projects.apnea.api.domain;
 
 /**
- * A breathing pause
+ * An immutable breathing pause record.
  */
-public class BreathingPause {
-    private String filePath;
-    private int index;
-    private float start;
-    private float end;
-    private BreathingPauseType type = BreathingPauseType.NOT_SET;
-
-    public BreathingPause(String filePath, int index, float start, float end, BreathingPauseType type) {
-        this.filePath = filePath;
-        this.index = index;
-        this.start = start;
-        this.end = end;
-        this.type = type;
+public record BreathingPause(
+        String filePath,
+        int index,
+        float start,
+        float end,
+        BreathingPauseType type
+) {
+    /**
+     * Compact constructor with validation.
+     */
+    public BreathingPause {
+        if (start < 0 || end < 0) {
+            throw new IllegalArgumentException("Start and end times must be non-negative");
+        }
+        if (end < start) {
+            throw new IllegalArgumentException("End time must be >= start time");
+        }
+        if (type == null) {
+            type = BreathingPauseType.NOT_SET;
+        }
     }
 
+    /**
+     * Factory method to create an unclassified breathing pause.
+     */
+    public static BreathingPause unclassified(String filePath, int index, float start, float end) {
+        return new BreathingPause(filePath, index, start, end, BreathingPauseType.NOT_SET);
+    }
+
+    /**
+     * Returns a new BreathingPause with the specified type.
+     */
+    public BreathingPause withType(BreathingPauseType newType) {
+        return new BreathingPause(filePath, index, start, end, newType);
+    }
+
+    /**
+     * Calculate the duration of the pause in seconds.
+     */
+    public float duration() {
+        return end - start;
+    }
+
+    // Backward compatibility getters for existing code
     public String getFilePath() {
         return filePath;
     }
@@ -36,20 +65,5 @@ public class BreathingPause {
 
     public BreathingPauseType getType() {
         return type;
-    }
-
-    public void setType(BreathingPauseType type) {
-        this.type = type;
-    }
-
-    @Override
-    public String toString() {
-        return "BreathingPause{" +
-                "filePath='" + filePath + '\'' +
-                ", index=" + index +
-                ", start=" + start +
-                ", end=" + end +
-                ", type=" + type +
-                '}';
     }
 }

@@ -4,68 +4,77 @@ import com.jonabai.projects.apnea.api.domain.BreathingPause;
 import com.jonabai.projects.apnea.api.domain.BreathingPauseType;
 import com.jonabai.projects.apnea.api.domain.SilenceDetectionException;
 import com.jonabai.projects.apnea.services.BreathingPauseOutputWriter;
-import org.apache.commons.io.FileUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class BreathingPauseOutputWriterImplTest {
+@DisplayName("BreathingPauseOutputWriter Tests")
+class BreathingPauseOutputWriterImplTest {
 
-    private static final String CSV_OUTPUT = "output/test_output.csv";
+    private BreathingPauseOutputWriter outputWriter;
 
-    private BreathingPauseOutputWriter breathingPauseOutputWriter;
+    @TempDir
+    Path tempDir;
 
-    @Before
-    public void setUp() throws Exception {
-        breathingPauseOutputWriter = new BreathingPauseOutputWriterImpl();
+    @BeforeEach
+    void setUp() {
+        outputWriter = new BreathingPauseOutputWriterImpl();
     }
 
     @Test
-    public void writeOutputToNullOutputFileNotThrowsException() throws Exception {
-        breathingPauseOutputWriter.writeOutput(null, new ArrayList<>());
+    @DisplayName("Should handle null output path gracefully")
+    void writeOutputToNullOutputFileNotThrowsException() {
+        assertDoesNotThrow(() -> outputWriter.writeOutput(null, new ArrayList<>()));
     }
 
     @Test
-    public void writeOutputFromNullListNotThrowsException() throws Exception {
-        breathingPauseOutputWriter.writeOutput("something", null);
+    @DisplayName("Should handle null pause list gracefully")
+    void writeOutputFromNullListNotThrowsException() {
+        assertDoesNotThrow(() -> outputWriter.writeOutput("something", null));
     }
 
-    @Test(expected = SilenceDetectionException.class)
-    public void writeOutputToNotAccessibleFolderThrowsException() throws Exception {
+    @Test
+    @DisplayName("Should throw exception for inaccessible directory")
+    void writeOutputToNotAccessibleFolderThrowsException() {
+        var pauses = List.of(
+                new BreathingPause("4", 1, 1f, 1f, BreathingPauseType.NORMAL)
+        );
+
+        assertThrows(SilenceDetectionException.class,
+                () -> outputWriter.writeOutput("/not_exists/failed.csv", pauses));
+    }
+
+    @Test
+    @DisplayName("Should write output CSV correctly")
+    void writeOutputIsOk() throws IOException {
         // given
-        List<BreathingPause> pauses = new ArrayList<>();
-        pauses.add(new BreathingPause("4", 1, 1f, 1f, BreathingPauseType.NORMAL));
-        pauses.add(new BreathingPause("5", 2, 2f, 2f, BreathingPauseType.NORMAL));
-        pauses.add(new BreathingPause("6", 3, 3f, 10f, BreathingPauseType.APNEA));
+        var pauses = List.of(
+                new BreathingPause("1", 1, 1f, 1f, BreathingPauseType.NORMAL),
+                new BreathingPause("2", 2, 2f, 2f, BreathingPauseType.NORMAL),
+                new BreathingPause("3", 3, 3f, 10f, BreathingPauseType.APNEA)
+        );
+
+        var outputPath = tempDir.resolve("test_output.csv");
+
+        // when
+        outputWriter.writeOutput(outputPath.toString(), pauses);
 
         // then
-        breathingPauseOutputWriter.writeOutput("/not_exists/failed.csv", pauses);
+        assertTrue(Files.exists(outputPath));
 
+        var expectedPath = Path.of("target/test-classes/good_output.csv");
+
+        // Use Files.mismatch() instead of FileUtils.contentEquals()
+        assertEquals(-1L, Files.mismatch(outputPath, expectedPath),
+                "Output file content should match expected");
     }
-
-    @Test
-    public void writeOutputISOk() throws Exception {
-        // given
-        List<BreathingPause> pauses = new ArrayList<>();
-        pauses.add(new BreathingPause("1", 1, 1f, 1f, BreathingPauseType.NORMAL));
-        pauses.add(new BreathingPause("2", 2, 2f, 2f, BreathingPauseType.NORMAL));
-        pauses.add(new BreathingPause("3", 3, 3f, 10f, BreathingPauseType.APNEA));
-
-        // then
-        breathingPauseOutputWriter.writeOutput(CSV_OUTPUT, pauses);
-
-        // then
-        File outputFile = new File(CSV_OUTPUT);
-        assertTrue(outputFile.exists());
-        assertTrue("The files differ!",
-                FileUtils.contentEquals(outputFile,
-                        new File("target/test-classes/good_output.csv")));
-
-    }
-
 }

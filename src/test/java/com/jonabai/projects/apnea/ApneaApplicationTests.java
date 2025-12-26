@@ -1,16 +1,16 @@
 package com.jonabai.projects.apnea;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest
-public class ApneaApplicationTests {
+@DisplayName("ApneaApplication Integration Tests")
+class ApneaApplicationTests {
 
-	@Test
-	public void contextLoads() {
-	}
-
+    @Test
+    @DisplayName("Application context loads successfully")
+    void contextLoads() {
+        // Verify Spring context loads successfully
+    }
 }

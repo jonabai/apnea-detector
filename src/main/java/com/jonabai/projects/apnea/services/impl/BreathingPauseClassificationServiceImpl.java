@@ -3,34 +3,43 @@ package com.jonabai.projects.apnea.services.impl;
 import com.jonabai.projects.apnea.api.domain.BreathingPause;
 import com.jonabai.projects.apnea.api.domain.BreathingPauseType;
 import com.jonabai.projects.apnea.services.BreathingPauseClassificationService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * BreathingPauseClassificationService implementation
+ * Service implementation for classifying breathing pauses based on duration.
  */
 @Service
 public class BreathingPauseClassificationServiceImpl implements BreathingPauseClassificationService {
 
-    private static final float APNEA_LIMIT = 4.5f;
+    private final float apneaThresholdSeconds;
+
+    public BreathingPauseClassificationServiceImpl(
+            @Value("${apnea.classification.threshold:4.5}") float apneaThresholdSeconds) {
+        this.apneaThresholdSeconds = apneaThresholdSeconds;
+    }
 
     @Override
-    public void classify(List<BreathingPause> pauses) {
-        if(pauses == null)
-            return;
-        pauses.stream().parallel().forEach(this::classify);
-    }
-
-    public float getApneaLimit() {
-        return APNEA_LIMIT;
-    }
-
-    private void classify(BreathingPause pause) {
-        if(pause.getEnd() - pause.getStart() >= APNEA_LIMIT) {
-            pause.setType(BreathingPauseType.APNEA);
-        } else {
-            pause.setType(BreathingPauseType.NORMAL);
+    public List<BreathingPause> classify(List<BreathingPause> pauses) {
+        if (pauses == null || pauses.isEmpty()) {
+            return List.of();
         }
+
+        return pauses.parallelStream()
+                .map(this::classify)
+                .toList();
+    }
+
+    public float getApneaThresholdSeconds() {
+        return apneaThresholdSeconds;
+    }
+
+    private BreathingPause classify(BreathingPause pause) {
+        var type = pause.duration() >= apneaThresholdSeconds
+                ? BreathingPauseType.APNEA
+                : BreathingPauseType.NORMAL;
+        return pause.withType(type);
     }
 }

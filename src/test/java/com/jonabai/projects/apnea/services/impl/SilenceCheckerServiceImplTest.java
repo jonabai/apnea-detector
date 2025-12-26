@@ -1,46 +1,53 @@
 package com.jonabai.projects.apnea.services.impl;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class SilenceCheckerServiceImplTest {
+@DisplayName("SilenceCheckerService Tests")
+class SilenceCheckerServiceImplTest {
+
     private static final double SILENCE_THRESHOLD = 0.00001d;
 
     private SilenceCheckerServiceImpl silenceCheckerService;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp() {
         silenceCheckerService = new SilenceCheckerServiceImpl(SILENCE_THRESHOLD);
     }
 
     @Test
-    public void isSilenceForNullArrayReturnsFalse() throws Exception {
-        boolean isSilence = silenceCheckerService.isSilence(null);
+    @DisplayName("Should return false for null array")
+    void isSilenceForNullArrayReturnsFalse() {
+        var isSilence = silenceCheckerService.isSilence(null);
 
         assertFalse(isSilence);
     }
 
     @Test
-    public void isSilenceForEmptyArrayReturnsFalse() throws Exception {
-        boolean isSilence = silenceCheckerService.isSilence(new double[] {});
+    @DisplayName("Should return false for empty array")
+    void isSilenceForEmptyArrayReturnsFalse() {
+        var isSilence = silenceCheckerService.isSilence(new double[]{});
 
         assertFalse(isSilence);
     }
 
     @Test
-    public void isSilenceForArrayReturnsFalse() throws Exception {
-        double[] buffer = new double[] {0.33, 0.34, 0.32, 0.31, 0.51};
-        boolean isSilence = silenceCheckerService.isSilence(buffer);
+    @DisplayName("Should return false for loud audio")
+    void isSilenceForLoudAudioReturnsFalse() {
+        var buffer = new double[]{0.33, 0.34, 0.32, 0.31, 0.51};
+        var isSilence = silenceCheckerService.isSilence(buffer);
 
         assertFalse(isSilence);
     }
 
     @Test
-    public void isSilenceForArrayReturnsTrue() throws Exception {
-        double[] buffer = new double[] {0d, 0d, 0d, 0d, 0.000008d};
-        boolean isSilence = silenceCheckerService.isSilence(buffer);
+    @DisplayName("Should return true for silence")
+    void isSilenceForSilentAudioReturnsTrue() {
+        var buffer = new double[]{0d, 0d, 0d, 0d, 0.000008d};
+        var isSilence = silenceCheckerService.isSilence(buffer);
 
         assertTrue(isSilence);
     }

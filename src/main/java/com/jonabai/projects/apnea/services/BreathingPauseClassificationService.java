@@ -5,13 +5,15 @@ import com.jonabai.projects.apnea.api.domain.BreathingPause;
 import java.util.List;
 
 /**
- * A Breathing pause classification service
+ * Service for classifying breathing pauses as normal or apnea.
  */
 public interface BreathingPauseClassificationService {
 
     /**
-     * Assigns the correct type property for each breathing pause element in the list
+     * Classifies each breathing pause and returns a new list with classified pauses.
+     *
      * @param pauses list of breathing pause elements
+     * @return new list with classified breathing pauses
      */
-    void classify(List<BreathingPause> pauses);
+    List<BreathingPause> classify(List<BreathingPause> pauses);
 }

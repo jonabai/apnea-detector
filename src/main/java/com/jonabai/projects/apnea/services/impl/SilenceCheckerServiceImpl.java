@@ -4,39 +4,37 @@ import com.jonabai.projects.apnea.services.SilenceCheckerService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+
 /**
- * SilenceCheckerService implemented using rms
+ * SilenceCheckerService implementation using RMS (Root Mean Square) calculation.
  */
 @Service
 public class SilenceCheckerServiceImpl implements SilenceCheckerService {
 
-    private double silenceThreshold;
+    private final double silenceThreshold;
 
-    public SilenceCheckerServiceImpl(@Value("${apnea.silence.checker.threshold:0.00001}") double silenceThreshold) {
+    public SilenceCheckerServiceImpl(
+            @Value("${apnea.silence.checker.threshold:0.00001}") double silenceThreshold) {
         this.silenceThreshold = silenceThreshold;
     }
 
+    @Override
     public boolean isSilence(double[] buffer) {
-        return buffer != null && volumeRMS(buffer) <= silenceThreshold;
+        return buffer != null && buffer.length > 0 && volumeRMS(buffer) <= silenceThreshold;
     }
 
     private double volumeRMS(double[] buffer) {
-        double sum = 0d;
-        if (buffer.length==0) {
+        if (buffer.length == 0) {
             return Double.MAX_VALUE;
-        } else {
-            for (double aBuffer : buffer) {
-                sum += aBuffer;
-            }
         }
-        double average = sum/buffer.length;
 
-        double sumMeanSquare = 0d;
-        for (double aBuffer : buffer) {
-            sumMeanSquare += Math.pow(aBuffer - average, 2d);
-        }
-        double averageMeanSquare = sumMeanSquare/buffer.length;
+        var average = Arrays.stream(buffer).average().orElse(0.0);
 
-        return Math.sqrt(averageMeanSquare);
+        var meanSquareSum = Arrays.stream(buffer)
+                .map(value -> Math.pow(value - average, 2))
+                .sum();
+
+        return Math.sqrt(meanSquareSum / buffer.length);
     }
 }

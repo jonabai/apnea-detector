@@ -5,19 +5,23 @@ import com.jonabai.projects.apnea.services.SilenceCheckerService;
 import com.jonabai.projects.apnea.services.WavFile;
 import com.jonabai.projects.apnea.services.WavFileFactory;
 import com.jonabai.projects.apnea.services.impl.wav.WavFileInputStream;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-public class AudioFileSilenceDetectorServiceImplTest {
+@ExtendWith(MockitoExtension.class)
+@DisplayName("AudioFileSilenceDetectorService Tests")
+class AudioFileSilenceDetectorServiceImplTest {
 
     @Mock
     private SilenceCheckerService silenceCheckerService;
@@ -27,20 +31,22 @@ public class AudioFileSilenceDetectorServiceImplTest {
 
     private AudioFileSilenceDetectorServiceImpl audioFileSilenceDetectorService;
 
-    @Before
-    public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
-        audioFileSilenceDetectorService = new AudioFileSilenceDetectorServiceImpl(silenceCheckerService, wavFileFactory);
+    @BeforeEach
+    void setUp() {
+        audioFileSilenceDetectorService = new AudioFileSilenceDetectorServiceImpl(
+                silenceCheckerService, wavFileFactory);
     }
 
     @Test
-    public void processNotExistingFileReturnEmptyList() throws Exception {
+    @DisplayName("Should return empty list for non-existing file")
+    void processNotExistingFileReturnEmptyList() {
         List<BreathingPause> pauses = audioFileSilenceDetectorService.processFile("not_exists.csv");
         assertTrue(pauses.isEmpty());
     }
 
     @Test
-    public void processFile() throws Exception {
+    @DisplayName("Should process WAV file and detect pauses")
+    void processFile() throws Exception {
         final String filePath = "target/test-classes/example-2.wav";
         WavFile wavFile = new WavFileInputStream(new File(filePath));
 

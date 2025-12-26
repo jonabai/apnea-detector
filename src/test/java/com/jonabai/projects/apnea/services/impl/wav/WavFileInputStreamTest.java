@@ -2,40 +2,43 @@ package com.jonabai.projects.apnea.services.impl.wav;
 
 import com.jonabai.projects.apnea.api.domain.WavFileException;
 import com.jonabai.projects.apnea.services.WavFile;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class WavFileInputStreamTest {
+@DisplayName("WavFileInputStream Tests")
+class WavFileInputStreamTest {
 
     private WavFile wavFile;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
         wavFile = new WavFileInputStream(new File("target/test-classes/example-2.wav"));
     }
 
-    @After
-    public void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         wavFile.close();
     }
 
-    @Test(expected = WavFileException.class)
-    public void openWavFileWrongFileThrowsException() throws Exception {
-        new WavFileInputStream(new File("not exists"));
+    @Test
+    @DisplayName("Should throw exception for non-existing file")
+    void openWavFileWrongFileThrowsException() {
+        assertThrows(WavFileException.class,
+                () -> new WavFileInputStream(new File("not exists")));
     }
 
     @Test
-    public void readFrames() throws Exception {
-
-        double[] buffer = new double[1024];
-        int numFrames = wavFile.readFrames(buffer, 1024);
+    @DisplayName("Should read frames from WAV file")
+    void readFrames() throws Exception {
+        var buffer = new double[1024];
+        var numFrames = wavFile.readFrames(buffer, 1024);
 
         assertTrue(numFrames > 0);
     }
-
 }
