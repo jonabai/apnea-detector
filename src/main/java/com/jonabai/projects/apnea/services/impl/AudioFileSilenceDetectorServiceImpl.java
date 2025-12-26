@@ -8,6 +8,8 @@ import com.jonabai.projects.apnea.services.WavFile;
 import com.jonabai.projects.apnea.services.WavFileFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -17,6 +19,7 @@ import java.util.List;
 
 /**
  * Service for detecting silence pauses in audio files.
+ * Supports adaptive calibration for noise floor detection.
  */
 @Service
 public class AudioFileSilenceDetectorServiceImpl implements AudioFileSilenceDetectorService {
@@ -25,14 +28,17 @@ public class AudioFileSilenceDetectorServiceImpl implements AudioFileSilenceDete
     private static final float SILENCE_MIN_DURATION = 0.001f; // seconds
     private static final int BUFFER_SIZE = 1024;
 
-    private final SilenceCheckerService silenceDetector;
+    private final ObjectProvider<SilenceCheckerService> silenceCheckerProvider;
     private final WavFileFactory wavFileFactory;
+    private final float calibrationDurationSeconds;
 
     public AudioFileSilenceDetectorServiceImpl(
-            SilenceCheckerService silenceDetector,
-            WavFileFactory wavFileFactory) {
-        this.silenceDetector = silenceDetector;
+            ObjectProvider<SilenceCheckerService> silenceCheckerProvider,
+            WavFileFactory wavFileFactory,
+            @Value("${apnea.silence.checker.calibration.duration:2.0}") float calibrationDurationSeconds) {
+        this.silenceCheckerProvider = silenceCheckerProvider;
         this.wavFileFactory = wavFileFactory;
+        this.calibrationDurationSeconds = calibrationDurationSeconds;
     }
 
     @Override
@@ -47,7 +53,9 @@ public class AudioFileSilenceDetectorServiceImpl implements AudioFileSilenceDete
 
         try (var wavFile = wavFileFactory.newWavFile(path.toFile())) {
             logFileInfo(wavFile);
-            processWavFile(wavFile, pauseList);
+            // Get a fresh instance of the silence checker for this file
+            var silenceDetector = silenceCheckerProvider.getObject();
+            processWavFile(wavFile, pauseList, silenceDetector);
         } catch (Exception e) {
             throw new SilenceDetectionException("Error processing file " + filePath, e);
         }
@@ -55,16 +63,49 @@ public class AudioFileSilenceDetectorServiceImpl implements AudioFileSilenceDete
         return pauseList;
     }
 
-    private void processWavFile(WavFile wavFile, List<BreathingPause> pauseList) throws Exception {
+    private void processWavFile(WavFile wavFile, List<BreathingPause> pauseList,
+                                 SilenceCheckerService silenceDetector) throws Exception {
         var numChannels = wavFile.getNumChannels();
         var sampleRate = wavFile.getSampleRate();
         var buffer = new double[BUFFER_SIZE * numChannels];
 
-        var state = new ProcessingState(false, 0f, 0);
-        int framesRead;
+        // Calibration phase: read initial samples to establish noise floor
+        int calibrationFrames = (int) (calibrationDurationSeconds * sampleRate);
+        List<double[]> calibrationBuffers = new ArrayList<>();
+        int framesCollected = 0;
 
+        while (framesCollected < calibrationFrames) {
+            int framesRead = wavFile.readFrames(buffer, BUFFER_SIZE);
+            if (framesRead <= 0) break;
+            calibrationBuffers.add(buffer.clone());
+            framesCollected += framesRead;
+        }
+
+        // Perform calibration with collected samples
+        if (!calibrationBuffers.isEmpty()) {
+            // Combine all calibration buffers into one for noise floor estimation
+            double[] combinedBuffer = calibrationBuffers.stream()
+                    .flatMapToDouble(java.util.Arrays::stream)
+                    .toArray();
+            silenceDetector.calibrate(combinedBuffer);
+            logger.info("Calibrated silence detector with {} frames, threshold: {}",
+                    framesCollected, silenceDetector.getCurrentThreshold());
+        }
+
+        // Reset detector state for main processing
+        silenceDetector.reset();
+
+        // Process calibration buffers first (they're part of the audio)
+        var state = new ProcessingState(false, 0f, 0);
+        for (double[] calibrationBuffer : calibrationBuffers) {
+            int framesRead = calibrationBuffer.length / numChannels;
+            state = processBuffer(calibrationBuffer, state, framesRead, wavFile, sampleRate, pauseList, silenceDetector);
+        }
+
+        // Continue processing rest of the file
+        int framesRead;
         while ((framesRead = wavFile.readFrames(buffer, BUFFER_SIZE)) > 0) {
-            state = processBuffer(buffer, state, framesRead, wavFile, sampleRate, pauseList);
+            state = processBuffer(buffer, state, framesRead, wavFile, sampleRate, pauseList, silenceDetector);
         }
 
         // Handle trailing silence
@@ -79,7 +120,8 @@ public class AudioFileSilenceDetectorServiceImpl implements AudioFileSilenceDete
             int framesRead,
             WavFile wavFile,
             long sampleRate,
-            List<BreathingPause> pauseList) {
+            List<BreathingPause> pauseList,
+            SilenceCheckerService silenceDetector) {
 
         var newOffset = state.currentOffset() + framesRead;
 

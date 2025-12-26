@@ -76,8 +76,7 @@ class ApneaDetectorServiceImplTest {
         @Test
         @DisplayName("Should process empty input file successfully")
         void processInputFileEmptyOk() {
-            when(classificationService.classify(anyList())).thenReturn(List.of());
-
+            // bad_input.csv has only header, no data rows, so no mocking needed
             assertDoesNotThrow(() ->
                     apneaDetectorService.process("target/test-classes/bad_input.csv", "some output file"));
         }

@@ -76,7 +76,7 @@ public class ApneaController {
             var response = AnalysisResponse.from(originalFilename, classifiedPauses);
 
             logger.info("Analysis complete: {} pauses detected ({} apnea events)",
-                    response.totalPauses(), response.apneaCount());
+                    response.totalPauses(), response.totalApneaCount());
 
             return ResponseEntity.ok(response);
 

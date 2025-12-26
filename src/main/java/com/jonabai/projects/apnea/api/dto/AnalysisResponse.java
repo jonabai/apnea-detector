@@ -6,13 +6,17 @@ import com.jonabai.projects.apnea.api.domain.BreathingPauseType;
 import java.util.List;
 
 /**
- * Response DTO for file analysis results.
+ * Response DTO for file analysis results with severity breakdown.
  */
 public record AnalysisResponse(
         String filename,
         int totalPauses,
-        int apneaCount,
         int normalCount,
+        int hypopneaCount,
+        int mildApneaCount,
+        int moderateApneaCount,
+        int severeApneaCount,
+        int totalApneaCount,
         List<PauseDto> pauses
 ) {
     /**
@@ -23,19 +27,39 @@ public record AnalysisResponse(
                 .map(PauseDto::from)
                 .toList();
 
-        var apneaCount = (int) pauses.stream()
-                .filter(p -> p.type() == BreathingPauseType.APNEA)
-                .count();
-
         var normalCount = (int) pauses.stream()
                 .filter(p -> p.type() == BreathingPauseType.NORMAL)
+                .count();
+
+        var hypopneaCount = (int) pauses.stream()
+                .filter(p -> p.type() == BreathingPauseType.HYPOPNEA)
+                .count();
+
+        var mildApneaCount = (int) pauses.stream()
+                .filter(p -> p.type() == BreathingPauseType.MILD_APNEA)
+                .count();
+
+        var moderateApneaCount = (int) pauses.stream()
+                .filter(p -> p.type() == BreathingPauseType.MODERATE_APNEA)
+                .count();
+
+        var severeApneaCount = (int) pauses.stream()
+                .filter(p -> p.type() == BreathingPauseType.SEVERE_APNEA)
+                .count();
+
+        var totalApneaCount = (int) pauses.stream()
+                .filter(p -> p.type().isHealthConcern())
                 .count();
 
         return new AnalysisResponse(
                 filename,
                 pauses.size(),
-                apneaCount,
                 normalCount,
+                hypopneaCount,
+                mildApneaCount,
+                moderateApneaCount,
+                severeApneaCount,
+                totalApneaCount,
                 pauseDtos
         );
     }

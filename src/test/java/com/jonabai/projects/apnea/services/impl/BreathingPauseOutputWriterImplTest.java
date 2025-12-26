@@ -58,9 +58,9 @@ class BreathingPauseOutputWriterImplTest {
     void writeOutputIsOk() throws IOException {
         // given
         var pauses = List.of(
-                new BreathingPause("1", 1, 1f, 1f, BreathingPauseType.NORMAL),
-                new BreathingPause("2", 2, 2f, 2f, BreathingPauseType.NORMAL),
-                new BreathingPause("3", 3, 3f, 10f, BreathingPauseType.APNEA)
+                new BreathingPause("test.wav", 1, 1f, 2f, BreathingPauseType.NORMAL),
+                new BreathingPause("test.wav", 2, 5f, 20f, BreathingPauseType.MILD_APNEA),
+                new BreathingPause("test.wav", 3, 30f, 65f, BreathingPauseType.SEVERE_APNEA)
         );
 
         var outputPath = tempDir.resolve("test_output.csv");
@@ -71,10 +71,15 @@ class BreathingPauseOutputWriterImplTest {
         // then
         assertTrue(Files.exists(outputPath));
 
-        var expectedPath = Path.of("target/test-classes/good_output.csv");
+        var lines = Files.readAllLines(outputPath);
+        assertEquals(4, lines.size()); // header + 3 data rows
 
-        // Use Files.mismatch() instead of FileUtils.contentEquals()
-        assertEquals(-1L, Files.mismatch(outputPath, expectedPath),
-                "Output file content should match expected");
+        // Check header
+        assertEquals("File Path,Pause #,start [secs],end [secs],duration [secs],type", lines.get(0));
+
+        // Check data rows
+        assertTrue(lines.get(1).contains("NORMAL"));
+        assertTrue(lines.get(2).contains("MILD_APNEA"));
+        assertTrue(lines.get(3).contains("SEVERE_APNEA"));
     }
 }

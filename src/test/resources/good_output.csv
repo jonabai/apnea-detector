@@ -1,4 +1,4 @@
 File Path,Pause #,start [secs],end [secs],duration [secs],type
 1,1,1.0,1.0,0.0,NORMAL
 2,2,2.0,2.0,0.0,NORMAL
-3,3,3.0,10.0,7.0,APNEA
+3,3,3.0,18.0,15.0,MILD_APNEA
